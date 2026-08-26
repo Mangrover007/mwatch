@@ -6,12 +6,15 @@
 #include <string>
 
 
+// DEBUG FILE
+#include "../include/debug.h"
+
+
 extern char** environ;
 
 
 // Path to subtitle directory and episodes directory
-const char* subs_path = "/home/mango/personal/anime/NGNL/JP_Subs/";
-const char* episodes_path = "/home/mango/personal/anime/NGNL/Episodes/";
+const char* base = "/home/mango/personal/anime/";
 
 
 // helper for moving an iterator to an arbitrary position from begin()
@@ -38,6 +41,73 @@ void fillSet(std::set<path>& s, const char* dir)
     }
 }
 
+#ifdef DEBUG
+void printArgv(int argc, char** argv)
+{
+    printf("Args:\n");
+
+    for (int i{0}; i < argc; i++)
+    {
+	printf("%s\n", argv[i]);
+    }
+}
+#endif
+
+
+struct Anime
+{
+    int episode;
+    std::string subFileDir;
+    std::string episodeFileDir;
+};
+
+
+bool parseArgv(int argc, char** argv, struct Anime* anime)
+{
+    DEBUG_LOG("Parsing Arguments...");
+
+    bool success = true;
+
+    for (int argIndex{1}; argIndex < argc; argIndex++)
+    {
+	std::string arg = argv[argIndex];
+	std::string key, val;
+
+	// separator character, in this case '='
+	int sep = 0;
+	while (sep < arg.length())
+	{
+	    sep++;
+	    if (arg[sep] == '=')
+	    {
+		break;
+	    }
+	}
+
+	// arg[i] is '='
+	key = arg.substr(0, sep);
+	val = arg.substr(sep + 1, arg.length());
+
+	DEBUG_LOG(key);
+	DEBUG_LOG(val);
+
+	// Could make this a map of key-val pairs; map<std::string, std::string>
+	// and then grab the value of each key and initialize the anime struct
+	// directly.
+	if (key == "--ep")
+	{
+	    anime->episode = std::stoi(val) - 1; // 0 indexed episode
+	}
+	else if (key == "--anime")
+	{
+	    anime->subFileDir = std::string(base) + val + "/subs/";
+	    anime->episodeFileDir = std::string(base) + val + "/episodes/";
+	}
+    }
+
+    return success;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -46,7 +116,23 @@ int main(int argc, char** argv)
 	return 0;
     }
 
-    int episode = std::stoi(argv[1]) - 1;
+#ifdef DEBUG
+    printArgv(argc, argv);
+#endif
+
+    struct Anime anime;
+
+    if (parseArgv(argc, argv, &anime))
+    {
+	printf("Arguments parsed successfully.\n");
+    }
+    else
+    {
+	printf("Failed to parse all arguments");
+	return -1;
+    }
+
+    int episode = anime.episode;
     
     if (episode < 0)
     {
@@ -57,15 +143,17 @@ int main(int argc, char** argv)
     std::set<path> episodes;
     std::set<path> subs;
 
-    fillSet(subs, subs_path);
-    fillSet(episodes, episodes_path);
+    fillSet(subs, anime.subFileDir.c_str());
+    fillSet(episodes, anime.episodeFileDir.c_str());
 
     auto finalSubPath = advance_iterator(subs, episode);
     auto finalEpisodePath = advance_iterator(episodes, episode);
 
 
+#ifdef DEBUG
     printf("Sub file:%s\n", finalSubPath->c_str());
     printf("Episode file%s\n", finalEpisodePath->c_str());
+#endif
 
 
     std::string mpvSubFileArg = "--sub-file=" + std::string(finalSubPath->c_str());
@@ -85,6 +173,7 @@ int main(int argc, char** argv)
     };
 
 
+#ifdef DEBUG
     printf("running command:\n");
     printf("%s ", mpv_bin);
 
@@ -94,9 +183,10 @@ int main(int argc, char** argv)
     }
 
     printf("\n");
+#endif
 
 
-    // run mpv
+    // run mpv; start the episode
     printf("%d\n", execve(mpv_bin, mpv_args, environ));
 
     return 0;
