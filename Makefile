@@ -1,3 +1,3 @@
 build/mwatch.out:
-	g++ src/mwatch.cpp -o build/match.out
+	g++ src/main.cpp -o build/match.out
 
