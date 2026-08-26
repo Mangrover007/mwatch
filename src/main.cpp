@@ -6,6 +6,10 @@
 #include <string>
 
 
+// DEBUG FILE
+#include "../include/debug.h"
+
+
 extern char** environ;
 
 
@@ -38,6 +42,61 @@ void fillSet(std::set<path>& s, const char* dir)
     }
 }
 
+#ifdef DEBUG
+void printArgv(int argc, char** argv)
+{
+    printf("Args:\n");
+
+    for (int i{0}; i < argc; i++)
+    {
+	printf("%s\n", argv[i]);
+    }
+}
+#endif
+
+
+struct Anime
+{
+    int episode;
+    std::string subFileDir;
+    std::string episodeFileDir;
+};
+
+
+bool parseArgv(int argc, char** argv, struct Anime* anime)
+{
+    bool success = true;
+
+    for (int argIndex{1}; argIndex < argc; argIndex++)
+    {
+	std::string arg = argv[argIndex];
+	std::string key, val;
+	int i = 0;
+	while (i < arg.length())
+	{
+	    i++;
+	    if (arg[i] == '=')
+	    {
+		break;
+	    }
+	}
+
+	// arg[i] is '='
+	key = arg.substr(0, i);
+	val = arg.substr(i + 1, arg.length());
+
+	DEBUG_LOG(key);
+	DEBUG_LOG(val);
+
+	if (key == "--ep")
+	{
+	    anime->episode = std::stoi(val) - 1; // 0 indexed episode
+	}
+    }
+
+    return success;
+}
+
 
 int main(int argc, char** argv)
 {
@@ -46,7 +105,23 @@ int main(int argc, char** argv)
 	return 0;
     }
 
-    int episode = std::stoi(argv[1]) - 1;
+#ifdef DEBUG
+    printArgv(argc, argv);
+#endif
+
+    struct Anime anime;
+
+    if (parseArgv(argc, argv, &anime))
+    {
+	printf("Arguments parsed successfully.\n");
+    }
+    else
+    {
+	printf("Failed to parse all arguments");
+	return -1;
+    }
+
+    int episode = anime.episode;
     
     if (episode < 0)
     {
